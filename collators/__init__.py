@@ -1,13 +1,12 @@
 import yaml
 
-from .default import MNISTCollator
+from .default import LibriTTSCollator
 from configs.args import CollatorArgs
-import torch
 
 
 def get_collator(args: CollatorArgs):
     return {
-        "default": MNISTCollator,
+        "default": LibriTTSCollator,
     }[
         args.name
     ](args)

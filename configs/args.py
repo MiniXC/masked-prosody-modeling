@@ -18,7 +18,7 @@ class TrainingArgs:
     n_steps: int = 10000
     batch_size: int = 32
     seed: int = 0
-    dataset: str = "mnist"
+    dataset: str = "cdminix/libritts-r-aligned"
     log_every_n_steps: int = 100
     do_full_eval: bool = True
     do_save: bool = False
@@ -32,8 +32,12 @@ class TrainingArgs:
 
 @dataclass
 class CollatorArgs:
-    normalize: bool = True
-    onehot: bool = True
+    overwrite: bool = False
+    bin_size: int = 128
+    mask_proportion: float = 0.5
+    mask_length: int = 10
+    max_length: int = 512
+    vocex_model: str = "cdminix/vocex"
     name: str = "default"
 
 
