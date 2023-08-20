@@ -329,7 +329,6 @@ def main():
             f"[yellow]WARNING[/yellow]: overwriting existing data (or writing new data)"
         )
         console_print(f"[yellow]WARNING[/yellow]: this may take a while")
-        collator.vocex.model.to(accelerator.device)
         for batch in tqdm(train_dl):
             pass
         for batch in tqdm(val_dl):
