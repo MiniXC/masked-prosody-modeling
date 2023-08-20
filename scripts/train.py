@@ -32,7 +32,7 @@ console = Console()
 from configs.args import TrainingArgs, ModelArgs, CollatorArgs
 from configs.validation import validate_args
 from util.remote import wandb_update_config, wandb_init, push_to_hub
-from model.simple_mlp import SimpleMLP
+from model.masked_prosody_model import MaskedProsodyModel
 from collators import get_collator
 
 
@@ -55,7 +55,7 @@ def print_and_draw_model():
     )
     console_print(model_summary)
     if accelerator.is_main_process:
-        model_graph = draw_graph(
+        draw_graph(
             model,
             input_data=dummy_input,
             save_graph=True,
@@ -279,7 +279,7 @@ def main():
     console_print(f"[green]process_index[/green]: {accelerator.process_index}")
 
     # model
-    model = SimpleMLP(model_args)
+    model = MaskedProsodyModel(model_args)
     console_rule("Model")
     print_and_draw_model()
 
@@ -302,7 +302,9 @@ def main():
     # plot first batch
     if accelerator.is_main_process:
         first_batch = collator([train_ds[i] for i in range(training_args.batch_size)])
+        print(first_batch)
         plot_first_batch(first_batch, training_args)
+        raise
         plt.savefig("figures/first_batch.png")
 
     # dataloader

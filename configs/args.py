@@ -14,11 +14,11 @@ class TrainingArgs:
     wandb_project: str = None
     wandb_dir: str = "wandb"
     train_split: str = "train"
-    val_split: str = "test"
+    val_split: str = "dev"
     n_steps: int = 10000
     batch_size: int = 32
     seed: int = 0
-    dataset: str = "cdminix/libritts-r-aligned"
+    dataset: str = "cdminix/libritts-aligned"
     log_every_n_steps: int = 100
     do_full_eval: bool = True
     do_save: bool = False
@@ -44,6 +44,8 @@ class CollatorArgs:
 @dataclass
 class ModelArgs:
     n_layers: int = 4
+    n_heads: int = 2
+    kernel_size: int = 3
     hidden_dim: int = 512
     dropout: float = 0.1
     residual: bool = True
