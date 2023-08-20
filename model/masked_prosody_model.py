@@ -1,6 +1,4 @@
 from pathlib import Path
-from collections import OrderedDict
-import os
 
 import yaml
 import torch
@@ -11,7 +9,11 @@ from rich.console import Console
 console = Console()
 
 from configs.args import ModelArgs
-from modules import *
+from .modules import (
+    PositionalEncoding,
+    TransformerEncoder,
+    ConformerLayer,
+)
 
 
 class MaskedProsodyModel(nn.Module):
@@ -50,14 +52,14 @@ class MaskedProsodyModel(nn.Module):
 
         self.output_pitch = nn.Sequential(
             nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.length, args.filter_size)),
+            nn.LayerNorm((args.max_length, args.filter_size)),
             nn.GELU(),
-            nn.Linear(args.filter_size, args.bins),
+            nn.Linear(args.filter_size, bins),
         )
 
         self.output_energy = nn.Sequential(
             nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.length, args.filter_size)),
+            nn.LayerNorm((args.max_length, args.filter_size)),
             nn.GELU(),
             nn.Linear(args.filter_size, bins),
         )
@@ -69,20 +71,12 @@ class MaskedProsodyModel(nn.Module):
             nn.Linear(args.filter_size, bins),
         )
 
-        self.apply(self._init_weights)
-
         self.args = args
 
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=0.02)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-
-    def forward(self, pitch, energy, vad, return_layer=None):
+    def forward(self, x, return_layer=None):
+        pitch = x[:, 0]
+        energy = x[:, 1]
+        vad = x[:, 2]
         pitch = self.pitch_embedding(pitch)
         energy = self.energy_embedding(energy)
         vad = self.vad_embedding(vad)
@@ -137,11 +131,13 @@ class MaskedProsodyModel(nn.Module):
     @property
     def dummy_input(self):
         torch.manual_seed(0)
-        return {
-            "pitch": torch.randint(0, self.args.bins + 2, (1, self.args.length)),
-            "energy": torch.randint(0, self.args.bins + 2, (1, self.args.length)),
-            "vad": torch.randint(0, self.args.bins + 2, (1, self.args.length)),
-        }
+        return torch.stack(
+            [
+                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
+                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
+                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
+            ]
+        ).transpose(0, 1)
 
     def export_onnx(self, path):
         path = Path(path)

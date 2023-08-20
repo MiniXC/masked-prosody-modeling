@@ -35,6 +35,7 @@ class CollatorArgs:
     overwrite: bool = False
     bin_size: int = 128
     mask_proportion: float = 0.5
+    mask_proportion_tolerance: float = 0.05
     mask_length: int = 10
     max_length: int = 512
     vocex_model: str = "cdminix/vocex"
@@ -43,9 +44,10 @@ class CollatorArgs:
 
 @dataclass
 class ModelArgs:
-    n_layers: int = 4
+    n_layers: int = 8
     n_heads: int = 2
     kernel_size: int = 3
+    filter_size: int = 256
     hidden_dim: int = 512
     dropout: float = 0.1
     residual: bool = True

@@ -279,6 +279,8 @@ def main():
     console_print(f"[green]process_index[/green]: {accelerator.process_index}")
 
     # model
+    model_args.bins = collator_args.bin_size
+    model_args.max_length = collator_args.max_length
     model = MaskedProsodyModel(model_args)
     console_rule("Model")
     print_and_draw_model()
@@ -302,10 +304,9 @@ def main():
     # plot first batch
     if accelerator.is_main_process:
         first_batch = collator([train_ds[i] for i in range(training_args.batch_size)])
-        print(first_batch)
-        plot_first_batch(first_batch, training_args)
-        raise
+        plot_first_batch(first_batch)
         plt.savefig("figures/first_batch.png")
+        wandb.log({"first_batch": wandb.Image("figures/first_batch.png")})
 
     # dataloader
     train_dl = DataLoader(
@@ -322,6 +323,18 @@ def main():
         shuffle=False,
         collate_fn=collator,
     )
+
+    if collator_args.overwrite:
+        console_print(
+            f"[yellow]WARNING[/yellow]: overwriting existing data (or writing new data)"
+        )
+        console_print(f"[yellow]WARNING[/yellow]: this may take a while")
+        collator.vocex.model.to(accelerator.device)
+        for batch in tqdm(train_dl):
+            pass
+        for batch in tqdm(val_dl):
+            pass
+        collator_args.overwrite = False
 
     # optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=training_args.lr)

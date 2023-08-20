@@ -113,7 +113,7 @@ class TransformerEncoder(nn.Module):
         output_for_return = None
         src_key_padding_mask_for_layers = src_key_padding_mask
 
-        if return_layer < 0:
+        if return_layer is not None and return_layer < 0:
             return_layer = self.num_layers + return_layer
 
         for i, mod in enumerate(self.layers):
