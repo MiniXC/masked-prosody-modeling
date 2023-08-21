@@ -1,4 +1,4 @@
-[![tests](https://github.com/MiniXC/ml-template/actions/workflows/run_lint_and_test.yml/badge.svg)](https://github.com/MiniXC/ml-template/actions/workflows/run_lint_and_test.yml)
+[![tests](https://github.com/MiniXC/masked-prosody-modeling/actions/workflows/run_lint_and_test.yml/badge.svg)](https://github.com/MiniXC/ml-template/actions/workflows/run_lint_and_test.yml)
 # Machine Leraning Template
 Template for my machine learning projects. 
 

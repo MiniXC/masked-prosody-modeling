@@ -96,9 +96,8 @@ class LibriTTSCollator:
             pitch = result["pitch"][-1]
             energy = result["energy"][-1]
             vad = result["vad"][-1]
-            pitch = (
-                torch.bucketize(pitch, self.bins) + 2
-            )  # 1 is reserved for masking, 0 is reserved for padding
+            # 1 is reserved for masking, 0 is reserved for padding
+            pitch = torch.bucketize(pitch, self.bins) + 2
             energy = torch.bucketize(energy, self.bins) + 2
             vad = torch.bucketize(vad, self.bins) + 2
             result["pitch"][-1] = pitch
@@ -117,20 +116,23 @@ class LibriTTSCollator:
                     new_mask.bool() & pad_mask
                 ).sum() / pad_mask.sum() >= self.mask_p - self.mask_proportion_tolerance:
                     mask = new_mask
-            result["pitch_masked"].append(result["pitch"][-1].clone())
-            result["pitch_masked"][-1][~mask] = 1
-            result["energy_masked"].append(result["energy"][-1].clone())
-            result["energy_masked"][-1][~mask] = 1
-            result["vad_masked"].append(result["vad"][-1].clone())
-            result["vad_masked"][-1][~mask] = 1
+            result["pitch_masked"].append(result["pitch"][-1])
+            result["pitch_masked"][-1] *= ~mask
+            result["pitch_masked"][-1] += ~mask
+            result["energy_masked"].append(result["energy"][-1])
+            result["energy_masked"][-1] *= ~mask
+            result["energy_masked"][-1] += ~mask
+            result["vad_masked"].append(result["vad"][-1])
+            result["vad_masked"][-1] *= ~mask
+            result["vad_masked"][-1] += ~mask
             result["mask_pred"].append(mask)
         # stack
-        result["pitch"] = torch.stack(result["pitch"])
-        result["energy"] = torch.stack(result["energy"])
-        result["vad"] = torch.stack(result["vad"])
-        result["pitch_masked"] = torch.stack(result["pitch_masked"])
-        result["energy_masked"] = torch.stack(result["energy_masked"])
-        result["vad_masked"] = torch.stack(result["vad_masked"])
-        result["mask_pad"] = torch.stack(result["mask_pad"])
-        result["mask_pred"] = torch.stack(result["mask_pred"])
+        result["pitch"] = torch.stack(result["pitch"]).long()
+        result["energy"] = torch.stack(result["energy"]).long()
+        result["vad"] = torch.stack(result["vad"]).long()
+        result["pitch_masked"] = torch.stack(result["pitch_masked"]).long()
+        result["energy_masked"] = torch.stack(result["energy_masked"]).long()
+        result["vad_masked"] = torch.stack(result["vad_masked"]).long()
+        result["mask_pad"] = torch.stack(result["mask_pad"]).bool()
+        result["mask_pred"] = torch.stack(result["mask_pred"]).bool()
         return result

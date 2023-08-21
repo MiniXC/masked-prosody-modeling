@@ -23,7 +23,7 @@ class MaskedProsodyModel(nn.Module):
     ):
         super().__init__()
 
-        bins = args.bins + 2
+        bins = args.bins
 
         self.pitch_embedding = nn.Embedding(bins, args.filter_size)
         self.energy_embedding = nn.Embedding(bins, args.filter_size)
@@ -135,8 +135,15 @@ class MaskedProsodyModel(nn.Module):
             config_file = cached_file(path_or_hubid, "model_config.yml")
             model_file = cached_file(path_or_hubid, "pytorch_model.bin")
         args = yaml.load(open(config_file, "r"), Loader=yaml.Loader)
-        args = ModelArgs(**args)
-        model = MaskedProsodyModel(args)
+        model_specific_args = [
+            "bins",
+            "max_length",
+        ]
+        fargs = {k: v for k, v in args.items() if k not in model_specific_args}
+        margs = ModelArgs(**fargs)
+        margs.bins = args["bins"]
+        margs.max_length = args["max_length"]
+        model = MaskedProsodyModel(margs)
         model.load_state_dict(torch.load(model_file))
         return model
 
@@ -145,9 +152,9 @@ class MaskedProsodyModel(nn.Module):
         torch.manual_seed(0)
         return torch.stack(
             [
-                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
-                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
-                torch.randint(0, self.args.bins + 2, (1, self.args.max_length)),
+                torch.randint(0, self.args.bins, (1, self.args.max_length)),
+                torch.randint(0, self.args.bins, (1, self.args.max_length)),
+                torch.randint(0, self.args.bins, (1, self.args.max_length)),
             ]
         ).transpose(0, 1)
 
