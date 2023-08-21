@@ -15,7 +15,7 @@ class TrainingArgs:
     wandb_dir: str = "wandb"
     train_split: str = "train"
     val_split: str = "dev"
-    n_steps: int = 10000
+    n_steps: int = 50000
     batch_size: int = 32
     seed: int = 0
     dataset: str = "cdminix/libritts-aligned"
@@ -50,4 +50,3 @@ class ModelArgs:
     filter_size: int = 256
     hidden_dim: int = 512
     dropout: float = 0.1
-    residual: bool = True

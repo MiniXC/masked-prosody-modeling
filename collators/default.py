@@ -34,13 +34,23 @@ class LibriTTSCollator:
         }
         for i, item in enumerate(batch):
             audio_path = Path(item["audio"])
-            if audio_path.with_suffix(".pitch.pt").exists() and not self.overwrite:
+            if (
+                all(
+                    [
+                        audio_path.with_suffix(".pitch.pt").exists(),
+                        audio_path.with_suffix(".energy.pt").exists(),
+                        audio_path.with_suffix(".vad.pt").exists(),
+                        audio_path.with_suffix(".pad_mask.pt").exists(),
+                    ]
+                )
+                and not self.overwrite
+            ):
                 result["pitch"].append(torch.load(audio_path.with_suffix(".pitch.pt")))
                 result["energy"].append(
                     torch.load(audio_path.with_suffix(".energy.pt"))
                 )
                 result["vad"].append(torch.load(audio_path.with_suffix(".vad.pt")))
-                result["pad_mask"].append(
+                result["mask_pad"].append(
                     torch.load(audio_path.with_suffix(".pad_mask.pt"))
                 )
             else:

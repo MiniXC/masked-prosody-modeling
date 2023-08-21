@@ -118,13 +118,42 @@ def train_epoch(epoch):
     global global_step
     model.train()
     losses = deque(maxlen=training_args.log_every_n_steps)
+    pitch_losses = deque(maxlen=training_args.log_every_n_steps)
+    energy_losses = deque(maxlen=training_args.log_every_n_steps)
+    vad_losses = deque(maxlen=training_args.log_every_n_steps)
     step = 0
     console_rule(f"Epoch {epoch}")
     last_loss = None
+    last_pitch_loss = None
+    last_energy_loss = None
+    last_vad_loss = None
     for batch in train_dl:
         with accelerator.accumulate(model):
-            y = model(batch["image"])
-            loss = torch.nn.functional.cross_entropy(y, batch["target"])
+            x = torch.stack(
+                [
+                    batch["pitch_masked"],
+                    batch["energy_masked"],
+                    batch["vad_masked"],
+                ]
+            ).transpose(0, 1)
+            y = model(x)
+            mask = batch["mask_pad"] * ~batch["mask_pred"]
+            pitch_loss = torch.nn.functional.cross_entropy(
+                y[:, 0].transpose(1, 2), batch["pitch"], reduction="none"
+            )
+            pitch_loss = pitch_loss * mask
+            pitch_loss = pitch_loss.sum() / mask.sum()
+            energy_loss = torch.nn.functional.cross_entropy(
+                y[:, 1].transpose(1, 2), batch["energy"], reduction="none"
+            )
+            energy_loss = energy_loss * mask
+            energy_loss = energy_loss.sum() / mask.sum()
+            vad_loss = torch.nn.functional.cross_entropy(
+                y[:, 2].transpose(1, 2), batch["vad"], reduction="none"
+            )
+            vad_loss = vad_loss * mask
+            vad_loss = vad_loss.sum() / mask.sum()
+            loss = (pitch_loss + energy_loss + vad_loss) / 3
             accelerator.backward(loss)
             accelerator.clip_grad_norm_(
                 model.parameters(), training_args.gradient_clip_val
@@ -133,13 +162,28 @@ def train_epoch(epoch):
             scheduler.step()
             optimizer.zero_grad()
         losses.append(loss.detach())
+        pitch_losses.append(pitch_loss.detach())
+        energy_losses.append(energy_loss.detach())
+        vad_losses.append(vad_loss.detach())
         if (
             step > 0
             and step % training_args.log_every_n_steps == 0
             and accelerator.is_main_process
         ):
             last_loss = torch.mean(torch.tensor(losses)).item()
-            wandb_log("train", {"loss": last_loss}, print_log=False)
+            last_pitch_loss = torch.mean(torch.tensor(pitch_losses)).item()
+            last_energy_loss = torch.mean(torch.tensor(energy_losses)).item()
+            last_vad_loss = torch.mean(torch.tensor(vad_losses)).item()
+            wandb_log(
+                "train",
+                {
+                    "loss": last_loss,
+                    "pitch_loss": last_pitch_loss,
+                    "energy_loss": last_energy_loss,
+                    "vad_loss": last_vad_loss,
+                },
+                print_log=False,
+            )
         if (
             training_args.do_save
             and global_step > 0
@@ -164,40 +208,145 @@ def train_epoch(epoch):
         if accelerator.is_main_process:
             pbar.update(1)
             if last_loss is not None:
-                pbar.set_postfix({"loss": f"{last_loss:.3f}"})
+                pbar.set_postfix(
+                    {
+                        "loss": f"{last_loss:.3f}",
+                        "pitch_loss": f"{last_pitch_loss:.3f}",
+                        "energy_loss": f"{last_energy_loss:.3f}",
+                        "vad_loss": f"{last_vad_loss:.3f}",
+                    }
+                )
 
 
 def evaluate():
     model.eval()
-    y_true = []
-    y_pred = []
+    y_true_pitch = []
+    y_pred_pitch = []
+    y_true_energy = []
+    y_pred_energy = []
+    y_true_vad = []
+    y_pred_vad = []
     losses = []
+    pitch_losses = []
+    energy_losses = []
+    vad_losses = []
     console_rule("Evaluation")
+    mask_sum = 0
     for batch in val_dl:
-        y = model(batch["image"])
-        loss = torch.nn.functional.cross_entropy(y, batch["target"])
+        x = torch.stack(
+            [
+                batch["pitch_masked"],
+                batch["energy_masked"],
+                batch["vad_masked"],
+            ]
+        ).transpose(0, 1)
+        y = model(x)
+        mask = batch["mask_pad"] * ~batch["mask_pred"]
+        pitch_loss = torch.nn.functional.cross_entropy(
+            y[:, 0].transpose(1, 2), batch["pitch"], reduction="none"
+        )
+        pitch_loss = pitch_loss * mask
+        pitch_loss = pitch_loss.sum() / mask.sum()
+        energy_loss = torch.nn.functional.cross_entropy(
+            y[:, 1].transpose(1, 2), batch["energy"], reduction="none"
+        )
+        energy_loss = energy_loss * mask
+        energy_loss = energy_loss.sum() / mask.sum()
+        vad_loss = torch.nn.functional.cross_entropy(
+            y[:, 2].transpose(1, 2), batch["vad"], reduction="none"
+        )
+        vad_loss = vad_loss * mask
+        vad_loss = vad_loss.sum() / mask.sum()
+        loss = (pitch_loss + energy_loss + vad_loss) / 3
         losses.append(loss.detach())
-        y_true.append(batch["target"].cpu().numpy())
-        y_pred.append(y.argmax(-1).cpu().numpy())
-    y_true = np.concatenate(y_true)
-    y_pred = np.concatenate(y_pred)
-    wandb_log("val", {"loss": torch.mean(torch.tensor(losses)).item()})
-    acc = accuracy_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred, average="macro")
-    precision = precision_score(y_true, y_pred, average="macro", zero_division=0)
-    recall = recall_score(y_true, y_pred, average="macro")
-    wandb_log("val", {"acc": acc, "f1": f1, "precision": precision, "recall": recall})
+        pitch_losses.append(pitch_loss.detach())
+        energy_losses.append(energy_loss.detach())
+        vad_losses.append(vad_loss.detach())
+        # undo bucketization (0 is padding, 1 is masking)
+        pitch_pred = (y[:, 0].argmax(-1) - 2).float() / model_args.bins * mask
+        pitch_true = (batch["pitch"] - 2).float() / model_args.bins * mask
+        energy_pred = (y[:, 1].argmax(-1) - 2).float() / model_args.bins * mask
+        energy_true = (batch["energy"] - 2).float() / model_args.bins * mask
+        vad_pred = (y[:, 2].argmax(-1) - 2).float() / model_args.bins * mask
+        vad_true = (batch["vad"] - 2).float() / model_args.bins * mask
+        y_true_pitch.append(pitch_true)
+        y_pred_pitch.append(pitch_pred)
+        y_true_energy.append(energy_true)
+        y_pred_energy.append(energy_pred)
+        y_true_vad.append(vad_true)
+        y_pred_vad.append(vad_pred)
+        mask_sum += mask.sum()
+    y_true_pitch = torch.cat(y_true_pitch)
+    y_pred_pitch = torch.cat(y_pred_pitch)
+    y_true_energy = torch.cat(y_true_energy)
+    y_pred_energy = torch.cat(y_pred_energy)
+    y_true_vad = torch.cat(y_true_vad)
+    y_pred_vad = torch.cat(y_pred_vad)
+    mae_pitch = y_pred_pitch.sub(y_true_pitch).abs().sum() / mask_sum
+    mae_energy = y_pred_energy.sub(y_true_energy).abs().sum() / mask_sum
+    mae_vad = y_pred_vad.sub(y_true_vad).abs().sum() / mask_sum
+    wandb_log(
+        "val",
+        {
+            "loss": torch.mean(torch.tensor(losses)).item(),
+            "pitch_loss": torch.mean(torch.tensor(pitch_losses)).item(),
+            "energy_loss": torch.mean(torch.tensor(energy_losses)).item(),
+            "vad_loss": torch.mean(torch.tensor(vad_losses)).item(),
+            "mae_pitch": mae_pitch.item(),
+            "mae_energy": mae_energy.item(),
+            "mae_vad": mae_vad.item(),
+        },
+    )
 
 
 def evaluate_loss_only():
     model.eval()
     losses = []
+    pitch_losses = []
+    energy_losses = []
+    vad_losses = []
     console_rule("Evaluation")
+    mask_sum = 0
     for batch in val_dl:
-        y = model(batch["image"])
-        loss = torch.nn.functional.cross_entropy(y, batch["target"])
+        x = torch.stack(
+            [
+                batch["pitch_masked"],
+                batch["energy_masked"],
+                batch["vad_masked"],
+            ]
+        ).transpose(0, 1)
+        y = model(x)
+        mask = batch["mask_pad"] * ~batch["mask_pred"]
+        pitch_loss = torch.nn.functional.cross_entropy(
+            y[:, 0].transpose(1, 2), batch["pitch"], reduction="none"
+        )
+        pitch_loss = pitch_loss * mask
+        pitch_loss = pitch_loss.sum() / mask.sum()
+        energy_loss = torch.nn.functional.cross_entropy(
+            y[:, 1].transpose(1, 2), batch["energy"], reduction="none"
+        )
+        energy_loss = energy_loss * mask
+        energy_loss = energy_loss.sum() / mask.sum()
+        vad_loss = torch.nn.functional.cross_entropy(
+            y[:, 2].transpose(1, 2), batch["vad"], reduction="none"
+        )
+        vad_loss = vad_loss * mask
+        vad_loss = vad_loss.sum() / mask.sum()
+        loss = (pitch_loss + energy_loss + vad_loss) / 3
         losses.append(loss.detach())
-    wandb_log("val", {"loss": torch.mean(torch.tensor(losses)).item()})
+        pitch_losses.append(pitch_loss.detach())
+        energy_losses.append(energy_loss.detach())
+        vad_losses.append(vad_loss.detach())
+        mask_sum += mask.sum()
+    wandb_log(
+        "val",
+        {
+            "loss": torch.mean(torch.tensor(losses)).item(),
+            "pitch_loss": torch.mean(torch.tensor(pitch_losses)).item(),
+            "energy_loss": torch.mean(torch.tensor(energy_losses)).item(),
+            "vad_loss": torch.mean(torch.tensor(vad_losses)).item(),
+        },
+    )
 
 
 def main():

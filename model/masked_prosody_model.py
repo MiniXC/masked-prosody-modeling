@@ -92,11 +92,23 @@ class MaskedProsodyModel(nn.Module):
         vad = self.output_vad(x)
         if return_layer is not None:
             return {
-                "pitch": pitch,
-                "energy": energy,
-                "vad": vad,
+                "y": torch.stack(
+                    [
+                        pitch,
+                        energy,
+                        vad,
+                    ]
+                ).transpose(0, 1),
                 "representations": reprs,
             }
+        else:
+            return torch.stack(
+                [
+                    pitch,
+                    energy,
+                    vad,
+                ]
+            ).transpose(0, 1)
 
     def save_model(self, path, accelerator=None, onnx=False):
         path = Path(path)
