@@ -1,9 +1,10 @@
-lr: 5.0e-4
+lr: 2.0e-5
 lr_schedule: "linear_with_warmup"
-lr_warmup_steps: 1000
+lr_warmup_steps: 100
 n_layers: 16
 hidden_dim: 512
 num_workers: 16
+val_split: "dev[:25%]"
 wandb_project: "masked-prosody-modeling"
 wandb_mode: "online"
 do_save: True
