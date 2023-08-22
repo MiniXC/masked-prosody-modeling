@@ -25,9 +25,9 @@ class MaskedProsodyModel(nn.Module):
 
         bins = args.bins
 
-        self.pitch_embedding = nn.Embedding(bins, args.filter_size)
-        self.energy_embedding = nn.Embedding(bins, args.filter_size)
-        self.vad_embedding = nn.Embedding(bins, args.filter_size)
+        self.pitch_embedding = nn.Embedding(bins + 2, args.filter_size)
+        self.energy_embedding = nn.Embedding(bins + 2, args.filter_size)
+        self.vad_embedding = nn.Embedding(bins + 2, args.filter_size)
 
         self.positional_encoding = PositionalEncoding(args.filter_size)
 
@@ -71,7 +71,18 @@ class MaskedProsodyModel(nn.Module):
             nn.Linear(args.filter_size, bins),
         )
 
+        self.apply(self._init_weights)
+
         self.args = args
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=0.02)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
 
     def forward(self, x, return_layer=None):
         pitch = x[:, 0]

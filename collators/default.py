@@ -98,9 +98,9 @@ class LibriTTSCollator:
         energy = torch.stack(result["energy"])
         vad = torch.stack(result["vad"])
         # 1 is reserved for masking, 0 is reserved for padding
-        pitch = torch.bucketize(pitch, self.bins) + 2
-        energy = torch.bucketize(energy, self.bins) + 2
-        vad = torch.bucketize(vad, self.bins) + 2
+        pitch = torch.bucketize(pitch, self.bins)
+        energy = torch.bucketize(energy, self.bins)
+        vad = torch.bucketize(vad, self.bins)
         result["pitch"] = pitch
         result["energy"] = energy
         result["vad"] = vad
@@ -118,12 +118,15 @@ class LibriTTSCollator:
                 new_mask.bool() & pad_mask
             ).sum() / pad_mask.sum() >= self.mask_p - self.mask_proportion_tolerance:
                 mask = new_mask
-        result["pitch_masked"] = result["pitch"].clone()
+        result["pitch_masked"] = result["pitch"].clone() + 2
         result["pitch_masked"][~mask] = 1
-        result["energy_masked"] = result["energy"].clone()
+        result["pitch_masked"][~pad_mask] = 0
+        result["energy_masked"] = result["energy"].clone() + 2
         result["energy_masked"][~mask] = 1
-        result["vad_masked"] = result["vad"].clone()
+        result["energy_masked"][~pad_mask] = 0
+        result["vad_masked"] = result["vad"].clone() + 2
         result["vad_masked"][~mask] = 1
-        result["mask_pred"] = mask.bool()
+        result["vad_masked"][~pad_mask] = 0
+        result["mask_pred"] = ~(mask.bool())
         result["mask_pad"] = result["mask_pad"].bool()
         return result
