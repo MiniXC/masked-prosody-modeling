@@ -40,13 +40,19 @@ class CollatorArgs:
     max_length: int = 512
     vocex_model: str = "cdminix/vocex"
     name: str = "default"
+    pitch_min: float = 50
+    pitch_max: float = 400
+    energy_min: float = 0
+    energy_max: float = 1
+    vad_min: float = 0
+    vad_max: float = 1
 
 
 @dataclass
 class ModelArgs:
     n_layers: int = 8
     n_heads: int = 2
-    kernel_size: int = 3
+    kernel_size: int = 7
     filter_size: int = 256
     hidden_dim: int = 512
     dropout: float = 0.1

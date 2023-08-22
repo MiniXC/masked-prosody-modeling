@@ -19,6 +19,12 @@ class LibriTTSCollator:
         self.mask_l = args.mask_length
         self.max_length = args.max_length
         self.mask_proportion_tolerance = args.mask_proportion_tolerance
+        self.pitch_min = args.pitch_min
+        self.pitch_max = args.pitch_max
+        self.energy_min = args.energy_min
+        self.energy_max = args.energy_max
+        self.vad_min = args.vad_min
+        self.vad_max = args.vad_max
 
     def __call__(self, batch):
         result = {
@@ -77,10 +83,6 @@ class LibriTTSCollator:
                 pitch = vocex_result["measures"]["pitch"][0, :-1]
                 energy = vocex_result["measures"]["energy"][0, :-1]
                 vad = vocex_result["measures"]["voice_activity_binary"][0, :-1]
-                # min-max normalize
-                pitch = (pitch - pitch.min()) / (pitch.max() - pitch.min())
-                energy = (energy - energy.min()) / (energy.max() - energy.min())
-                vad = (vad - vad.min()) / (vad.max() - vad.min())
                 pitch[torch.isnan(pitch)] = 0
                 energy[torch.isnan(energy)] = 0
                 vad[torch.isnan(vad)] = 0
@@ -98,6 +100,19 @@ class LibriTTSCollator:
         energy = torch.stack(result["energy"])
         vad = torch.stack(result["vad"])
         # 1 is reserved for masking, 0 is reserved for padding
+        result["pitch_raw"] = pitch
+        result["energy_raw"] = energy
+        result["vad_raw"] = vad
+        # clip to range specified in args
+        pitch = torch.clip(pitch, self.pitch_min, self.pitch_max) / (
+            self.pitch_max - self.pitch_min
+        )
+        energy = torch.clip(energy, self.energy_min, self.energy_max) / (
+            self.energy_max - self.energy_min
+        )
+        vad = torch.clip(vad, self.vad_min, self.vad_max) / (
+            self.vad_max - self.vad_min
+        )
         pitch = torch.bucketize(pitch, self.bins)
         energy = torch.bucketize(energy, self.bins)
         vad = torch.bucketize(vad, self.bins)

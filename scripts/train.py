@@ -404,8 +404,26 @@ def main():
                 ).item()
             )
         mask_percentages = np.array(mask_percentages)
+        pitch_percentiles = np.percentile(
+            first_batch["pitch_raw"].numpy().flatten(), [5, 95]
+        )
+        energy_percentiles = np.percentile(
+            first_batch["energy_raw"].numpy().flatten(), [5, 95]
+        )
+        vad_percentiles = np.percentile(
+            first_batch["vad_raw"].numpy().flatten(), [5, 95]
+        )
         console_print(
             f"[green]mask_percentage[/green]: {mask_percentages.mean():.3f} ± {mask_percentages.std():.3f}"
+        )
+        console_print(
+            f"[green]pitch_percentiles[/green]: {pitch_percentiles[0]:.3f}, {pitch_percentiles[1]:.3f}"
+        )
+        console_print(
+            f"[green]energy_percentiles[/green]: {energy_percentiles[0]:.3f}, {energy_percentiles[1]:.3f}"
+        )
+        console_print(
+            f"[green]vad_percentiles[/green]: {vad_percentiles[0]:.3f}, {vad_percentiles[1]:.3f}"
         )
         wandb.log(
             {
