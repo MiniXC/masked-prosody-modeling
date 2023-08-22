@@ -92,47 +92,38 @@ class LibriTTSCollator:
                 torch.save(energy, audio_path.with_suffix(".energy.pt"))
                 torch.save(vad, audio_path.with_suffix(".vad.pt"))
                 torch.save(pad_mask, audio_path.with_suffix(".pad_mask.pt"))
-            # bucketize
-            pitch = result["pitch"][-1]
-            energy = result["energy"][-1]
-            vad = result["vad"][-1]
-            # 1 is reserved for masking, 0 is reserved for padding
-            pitch = torch.bucketize(pitch, self.bins) + 2
-            energy = torch.bucketize(energy, self.bins) + 2
-            vad = torch.bucketize(vad, self.bins) + 2
-            result["pitch"][-1] = pitch
-            result["energy"][-1] = energy
-            result["vad"][-1] = vad
-            # mask
-            # We always mask a fixed proportion of the frames, but vary the length of the masked spans.
-            # We mask self.mask_p of the frames, but vary the length of the masked spans (using self.mask_l)
-            mask = torch.ones_like(result["mask_pad"][-1]).bool()
-            pad_mask = result["mask_pad"][-1].bool()
-            while (mask.bool() & pad_mask).sum() / pad_mask.sum() > self.mask_p:
-                start = np.random.randint(0, self.max_length)
-                new_mask = mask.clone()
-                new_mask[start : start + self.mask_l] = 0
-                if (
-                    new_mask.bool() & pad_mask
-                ).sum() / pad_mask.sum() >= self.mask_p - self.mask_proportion_tolerance:
-                    mask = new_mask
-            result["pitch_masked"].append(result["pitch"][-1])
-            result["pitch_masked"][-1] *= ~mask
-            result["pitch_masked"][-1] += ~mask
-            result["energy_masked"].append(result["energy"][-1])
-            result["energy_masked"][-1] *= ~mask
-            result["energy_masked"][-1] += ~mask
-            result["vad_masked"].append(result["vad"][-1])
-            result["vad_masked"][-1] *= ~mask
-            result["vad_masked"][-1] += ~mask
-            result["mask_pred"].append(mask)
-        # stack
-        result["pitch"] = torch.stack(result["pitch"]).long()
-        result["energy"] = torch.stack(result["energy"]).long()
-        result["vad"] = torch.stack(result["vad"]).long()
-        result["pitch_masked"] = torch.stack(result["pitch_masked"]).long()
-        result["energy_masked"] = torch.stack(result["energy_masked"]).long()
-        result["vad_masked"] = torch.stack(result["vad_masked"]).long()
-        result["mask_pad"] = torch.stack(result["mask_pad"]).bool()
-        result["mask_pred"] = torch.stack(result["mask_pred"]).bool()
+        # same as above, but not in an expensive loop
+        # bucketize
+        pitch = torch.stack(result["pitch"])
+        energy = torch.stack(result["energy"])
+        vad = torch.stack(result["vad"])
+        # 1 is reserved for masking, 0 is reserved for padding
+        pitch = torch.bucketize(pitch, self.bins) + 2
+        energy = torch.bucketize(energy, self.bins) + 2
+        vad = torch.bucketize(vad, self.bins) + 2
+        result["pitch"] = pitch
+        result["energy"] = energy
+        result["vad"] = vad
+        # mask
+        # We always mask a fixed proportion of the frames, but vary the length of the masked spans.
+        # We mask self.mask_p of the frames, but vary the length of the masked spans (using self.mask_l)
+        result["mask_pad"] = torch.stack(result["mask_pad"])
+        mask = torch.ones_like(result["mask_pad"]).bool()
+        pad_mask = result["mask_pad"].bool()
+        while (mask.bool() & pad_mask).sum() / pad_mask.sum() > self.mask_p:
+            start = np.random.randint(0, self.max_length)
+            new_mask = mask.clone()
+            new_mask[:, start : start + self.mask_l] = 0
+            if (
+                new_mask.bool() & pad_mask
+            ).sum() / pad_mask.sum() >= self.mask_p - self.mask_proportion_tolerance:
+                mask = new_mask
+        result["pitch_masked"] = result["pitch"].clone()
+        result["pitch_masked"][~mask] = 1
+        result["energy_masked"] = result["energy"].clone()
+        result["energy_masked"][~mask] = 1
+        result["vad_masked"] = result["vad"].clone()
+        result["vad_masked"][~mask] = 1
+        result["mask_pred"] = mask.bool()
+        result["mask_pad"] = result["mask_pad"].bool()
         return result

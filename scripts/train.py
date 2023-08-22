@@ -455,7 +455,24 @@ def main():
         first_batch = collator([train_ds[i] for i in range(training_args.batch_size)])
         plot_first_batch(first_batch)
         plt.savefig("figures/first_batch.png")
-        wandb.log({"first_batch": wandb.Image("figures/first_batch.png")})
+        mask_percentages = []
+        for i in range(first_batch["pitch"].shape[0]):
+            mask_percentages.append(
+                (
+                    (~first_batch["mask_pred"] * first_batch["mask_pad"])[i].sum()
+                    / first_batch["mask_pad"][i].sum()
+                ).item()
+            )
+        mask_percentages = np.array(mask_percentages)
+        console_print(
+            f"[green]mask_percentage[/green]: {mask_percentages.mean():.3f} ± {mask_percentages.std():.3f}"
+        )
+        wandb.log(
+            {
+                "first_batch": wandb.Image("figures/first_batch.png"),
+                "mask_percentage": mask_percentages.mean(),
+            }
+        )
 
     # dataloader
     train_dl = DataLoader(
