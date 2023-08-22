@@ -475,13 +475,21 @@ def main():
         )
 
     # dataloader
-    train_dl = DataLoader(
-        train_ds,
-        batch_size=training_args.batch_size,
-        shuffle=True,
-        collate_fn=collator,
-        drop_last=True,
-    )
+    if training_args.n_workers is None:
+        train_dl = DataLoader(
+            train_ds,
+            batch_size=training_args.batch_size,
+            shuffle=True,
+            collate_fn=collator,
+        )
+    else:
+        train_dl = DataLoader(
+            train_ds,
+            batch_size=training_args.batch_size,
+            num_workers=training_args.n_workers,
+            shuffle=True,
+            collate_fn=collator,
+        )
 
     val_dl = DataLoader(
         val_ds,

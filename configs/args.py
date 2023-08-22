@@ -15,7 +15,8 @@ class TrainingArgs:
     wandb_dir: str = "wandb"
     train_split: str = "train"
     val_split: str = "dev"
-    n_steps: int = 50000
+    n_workers: int = None
+    n_steps: int = 10000
     batch_size: int = 32
     seed: int = 0
     dataset: str = "cdminix/libritts-aligned"
@@ -34,7 +35,7 @@ class TrainingArgs:
 class CollatorArgs:
     overwrite: bool = False
     bin_size: int = 128
-    mask_proportion: float = 0.5
+    mask_proportion: float = 0.475
     mask_proportion_tolerance: float = 0.05
     mask_length: int = 10
     max_length: int = 512

@@ -3,5 +3,7 @@ lr_schedule: "linear_with_warmup"
 lr_warmup_steps: 1000
 n_layers: 16
 hidden_dim: 512
+num_workers: 16
 wandb_project: "masked-prosody-modeling"
 wandb_mode: "online"
+do_save: True
