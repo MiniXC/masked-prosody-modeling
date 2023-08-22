@@ -10,14 +10,17 @@ It's quite opinionated in the following (and probably more) ways:
 - uses separate configs for training (everything not shipped with the model), model and collator
 
 ## Architecture
+
 The following updates automatically every time ``scripts/train.py`` is run.
 <details>
 <summary>Click to expand</summary>
 <img src="./figures/model.png"></img>
 </details>
 
-## First Batch
+## First Batch
+
 The following updates automatically every time ``scripts/train.py`` is run.
+
 <details>
 <summary>Click to expand</summary>
 <img src="./figures/first_batch.png"></img>
