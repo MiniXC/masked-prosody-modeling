@@ -1,4 +1,4 @@
-lr: 8.0e-5
+lr: 5.0e-4
 lr_schedule: "linear_with_warmup"
 lr_warmup_steps: 100
 n_layers: 16
