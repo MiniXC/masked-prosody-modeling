@@ -6,7 +6,7 @@ class TrainingArgs:
     lr: float = 1e-4
     lr_schedule: str = "linear_with_warmup"
     lr_warmup_steps: int = 1000
-    gradient_clip_val: float = 10.0
+    gradient_clip_val: float = 1.0
     checkpoint_path: str = "checkpoints"
     output_path: str = "outputs"
     run_name: str = None

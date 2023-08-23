@@ -1,0 +1,14 @@
+bin_size: 64
+energy_max: 1
+energy_min: 0
+mask_length: 64
+mask_proportion: 0.475
+mask_proportion_tolerance: 0.05
+max_length: 512
+name: default
+overwrite: false
+pitch_max: 400
+pitch_min: 50
+vad_max: 1
+vad_min: 0
+vocex_model: cdminix/vocex
