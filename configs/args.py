@@ -37,6 +37,8 @@ class CollatorArgs:
     mask_proportion: float = 0.475
     mask_proportion_tolerance: float = 0.05
     mask_length: int = 10
+    mask_length_max: int = None
+    drop_input_prob: float = 0.05
     max_length: int = 512
     vocex_model: str = "cdminix/vocex"
     name: str = "default"

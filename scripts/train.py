@@ -467,6 +467,14 @@ def main():
             pass
         collator_args.overwrite = False
 
+    if training_args.n_workers is not None:
+        train_dl = DataLoader(
+            train_ds,
+            batch_size=training_args.batch_size,
+            shuffle=True,
+            collate_fn=collator,
+        )
+
     # optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=training_args.lr)
 

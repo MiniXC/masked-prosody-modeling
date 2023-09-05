@@ -44,30 +44,15 @@ class MaskedProsodyModel(nn.Module):
             num_layers=args.n_layers,
         )
 
-        self.output_layer = nn.Sequential(
-            nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.max_length, args.filter_size)),
-            nn.GELU(),
-        )
-
         self.output_pitch = nn.Sequential(
-            nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.max_length, args.filter_size)),
-            nn.GELU(),
             nn.Linear(args.filter_size, bins),
         )
 
         self.output_energy = nn.Sequential(
-            nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.max_length, args.filter_size)),
-            nn.GELU(),
             nn.Linear(args.filter_size, bins),
         )
 
         self.output_vad = nn.Sequential(
-            nn.Linear(args.filter_size, args.filter_size),
-            nn.LayerNorm((args.max_length, args.filter_size)),
-            nn.GELU(),
             nn.Linear(args.filter_size, bins),
         )
 
@@ -97,7 +82,6 @@ class MaskedProsodyModel(nn.Module):
             x, reprs = self.transformer(x, return_layer=return_layer)
         else:
             x = self.transformer(x)
-        x = self.output_layer(x)
         pitch = self.output_pitch(x)
         energy = self.output_energy(x)
         vad = self.output_vad(x)
@@ -168,19 +152,3 @@ class MaskedProsodyModel(nn.Module):
                 torch.randint(0, self.args.bins, (1, self.args.max_length)),
             ]
         ).transpose(0, 1)
-
-    def export_onnx(self, path):
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.onnx.export(
-            self,
-            self.dummy_input,
-            path,
-            input_names=["input"],
-            output_names=["output"],
-            dynamic_axes={
-                "input": {0: "batch_size"},
-                "output": {0: "batch_size"},
-            },
-            opset_version=11,
-        )

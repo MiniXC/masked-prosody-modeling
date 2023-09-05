@@ -23,5 +23,5 @@ def validate_args(*args):
             if arg.hidden_dim % 2 != 0:
                 raise ValueError("hidden_dim should be divisible by 2")
         if isinstance(arg, CollatorArgs):
-            if arg.name not in ["default"]:
+            if arg.name not in ["default", "algo"]:
                 raise ValueError(f"collator {arg.name} not supported")

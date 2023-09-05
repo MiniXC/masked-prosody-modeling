@@ -1,10 +1,12 @@
+# do run with variable mask length
+accelerate launch scripts/train.py configs/default.yml --bin_size 16 --mask_length 2 --mask_length_max 128 --vary_mask_percent --run_name "bin16_mask_diff"
 # redo runs with bad results
-accelerate launch scripts/train.py configs/default.yml --bin_size 64 --mask_length 4 --run_name "bin64_mask4"
-accelerate launch scripts/train.py configs/default.yml --bin_size 16 --mask_length 64 --run_name "bin16_mask64"
-accelerate launch scripts/train.py configs/default.yml --bin_size 64 --mask_length 32 --run_name "bin64_mask32"
-accelerate launch scripts/train.py configs/default.yml --bin_size 512 --mask_length 32 --run_name "bin512_mask32"
-accelerate launch scripts/train.py configs/default.yml --bin_size 512 --mask_length 128 --run_name "bin512_mask128"
-accelerate launch scripts/train.py configs/default.yml --bin_size 1024 --mask_length 128 --run_name "bin1024_mask128"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 64 --mask_length 4 --run_name "bin64_mask4"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 16 --mask_length 64 --run_name "bin16_mask64"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 64 --mask_length 32 --run_name "bin64_mask32"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 512 --mask_length 32 --run_name "bin512_mask32"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 512 --mask_length 128 --run_name "bin512_mask128"
+# accelerate launch scripts/train.py configs/default.yml --bin_size 1024 --mask_length 128 --run_name "bin1024_mask128"
 # we do a grid search over bin size and mask length
 # - bin sizes: 16, 32, 64, 128, 512, 1024
 # - mask lengths: 1, 2, 4, 8, 16, 32, 64, 128
