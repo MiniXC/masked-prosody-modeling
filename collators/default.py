@@ -144,7 +144,7 @@ class LibriTTSAlgoCollator:
         vad[inv_mask_vad] = 0
         pitch = torch.bucketize(pitch, self.bins)
         energy = torch.bucketize(energy, self.bins)
-        vad = torch.bucketize(vad, self.bins)
+        vad = torch.bucketize(vad, torch.linspace(0, 1, 2))
         result["pitch"] = pitch
         result["energy"] = energy
         result["vad"] = vad

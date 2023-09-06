@@ -138,16 +138,20 @@ def train_epoch(epoch):
             ).transpose(0, 1)
             y = model(x)
             mask = batch["mask_pad"] * batch["mask_pred"]
-            pred_pitch = y[:, 0].permute(0, 2, 1)
-            pred_energy = y[:, 1].permute(0, 2, 1)
-            pred_vad = y[:, 2].permute(0, 2, 1)
-            pitch_loss = torch.nn.functional.cross_entropy(pred_pitch, batch["pitch"])
+            pred_pitch = y[0].permute(0, 2, 1)
+            pred_energy = y[1].permute(0, 2, 1)
+            pred_vad = y[2].permute(0, 2, 1)
+            pitch_loss = torch.nn.functional.cross_entropy(
+                pred_pitch, batch["pitch"]
+            ) / np.log(collator_args.bin_size)
             pitch_loss = pitch_loss * mask
             energy_loss = torch.nn.functional.cross_entropy(
                 pred_energy, batch["energy"]
-            )
+            ) / np.log(collator_args.bin_size)
             energy_loss = energy_loss * mask
-            vad_loss = torch.nn.functional.cross_entropy(pred_vad, batch["vad"])
+            vad_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+                pred_vad, batch["vad"].float().unsqueeze(1)
+            ) / np.log(2)
             vad_loss = vad_loss * mask
             loss = (pitch_loss + energy_loss + vad_loss).mean()
             accelerator.backward(loss)
@@ -190,7 +194,6 @@ def train_epoch(epoch):
             return
         if (
             training_args.eval_every_n_steps is not None
-            and global_step > 0
             and global_step % training_args.eval_every_n_steps == 0
             and accelerator.is_main_process
         ):
@@ -236,16 +239,16 @@ def evaluate():
         y = model(x)
         mask = batch["mask_pad"] * batch["mask_pred"]
         pitch_loss = torch.nn.functional.cross_entropy(
-            y[:, 0].transpose(1, 2), batch["pitch"]
-        )
+            y[0].transpose(1, 2), batch["pitch"]
+        ) / np.log(collator_args.bin_size)
         pitch_loss = pitch_loss * mask
         energy_loss = torch.nn.functional.cross_entropy(
-            y[:, 1].transpose(1, 2), batch["energy"]
-        )
+            y[1].transpose(1, 2), batch["energy"]
+        ) / np.log(collator_args.bin_size)
         energy_loss = energy_loss * mask
-        vad_loss = torch.nn.functional.cross_entropy(
-            y[:, 2].transpose(1, 2), batch["vad"]
-        )
+        vad_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+            y[2].transpose(1, 2), batch["vad"].unsqueeze(1).float()
+        ) / np.log(2)
         vad_loss = vad_loss * mask
         loss = (pitch_loss + energy_loss + vad_loss).mean()
         losses.append(loss.detach())
@@ -253,11 +256,11 @@ def evaluate():
         energy_losses.append(energy_loss.mean().detach())
         vad_losses.append(vad_loss.mean().detach())
         # undo bucketization (0 is padding, 1 is masking)
-        pitch_pred = y[:, 0].argmax(-1).float() / model_args.bins * mask
+        pitch_pred = y[0].argmax(-1).float() / model_args.bins * mask
         pitch_true = (batch["pitch"]).float() / model_args.bins * mask
-        energy_pred = y[:, 1].argmax(-1).float() / model_args.bins * mask
+        energy_pred = y[1].argmax(-1).float() / model_args.bins * mask
         energy_true = (batch["energy"]).float() / model_args.bins * mask
-        vad_pred = y[:, 2].argmax(-1).float() / model_args.bins * mask
+        vad_pred = y[2].argmax(-1).float() / model_args.bins * mask
         vad_true = (batch["vad"]).float() / model_args.bins * mask
         y_true_pitch.append(pitch_true)
         y_pred_pitch.append(pitch_pred)
@@ -368,6 +371,7 @@ def main():
     console_print(f"[green]process_index[/green]: {accelerator.process_index}")
 
     # model
+    seed_everything(training_args.seed)
     model_args.bins = collator_args.bin_size
     model_args.max_length = collator_args.max_length
     model = MaskedProsodyModel(model_args)

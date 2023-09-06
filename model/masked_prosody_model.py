@@ -27,7 +27,7 @@ class MaskedProsodyModel(nn.Module):
 
         self.pitch_embedding = nn.Embedding(bins + 2, args.filter_size)
         self.energy_embedding = nn.Embedding(bins + 2, args.filter_size)
-        self.vad_embedding = nn.Embedding(bins + 2, args.filter_size)
+        self.vad_embedding = nn.Embedding(2 + 2, args.filter_size)
 
         self.positional_encoding = PositionalEncoding(args.filter_size)
 
@@ -53,7 +53,7 @@ class MaskedProsodyModel(nn.Module):
         )
 
         self.output_vad = nn.Sequential(
-            nn.Linear(args.filter_size, bins),
+            nn.Linear(args.filter_size, 1),
         )
 
         self.apply(self._init_weights)
@@ -87,23 +87,19 @@ class MaskedProsodyModel(nn.Module):
         vad = self.output_vad(x)
         if return_layer is not None:
             return {
-                "y": torch.stack(
-                    [
-                        pitch,
-                        energy,
-                        vad,
-                    ]
-                ).transpose(0, 1),
-                "representations": reprs,
-            }
-        else:
-            return torch.stack(
-                [
+                "y": [
                     pitch,
                     energy,
                     vad,
-                ]
-            ).transpose(0, 1)
+                ],
+                "representations": reprs,
+            }
+        else:
+            return [
+                pitch,
+                energy,
+                vad,
+            ]
 
     def save_model(self, path, accelerator=None, onnx=False):
         path = Path(path)
@@ -149,6 +145,6 @@ class MaskedProsodyModel(nn.Module):
             [
                 torch.randint(0, self.args.bins, (1, self.args.max_length)),
                 torch.randint(0, self.args.bins, (1, self.args.max_length)),
-                torch.randint(0, self.args.bins, (1, self.args.max_length)),
+                torch.randint(0, 2, (1, self.args.max_length)),
             ]
         ).transpose(0, 1)
