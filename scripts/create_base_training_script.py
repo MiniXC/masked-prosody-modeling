@@ -1,6 +1,6 @@
 import numpy as np
 
-command = "accelerate launch scripts/train.py configs/default.yml --bin_size {bin_size} --mask_len {mask_len} --run_name \"bin{bin_size}_mask{mask_len}\""
+command = "accelerate launch scripts/train.py configs/default.yml --bin_size {bin_size} --mask_length {mask_len} --run_name \"bin{bin_size}_mask{mask_len}\" --wandb_mode=online"
 
 bin_sizes = [4, 8, 16, 32, 64, 128, 512, 1024]
 mask_lens = [1, 2, 4, 8, 16, 32, 64, 128]
