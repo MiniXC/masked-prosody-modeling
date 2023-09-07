@@ -5,8 +5,8 @@ graphviz
 huggingface-hub
 librosa
 matplotlib
-numpy
 numba
+numpy
 onnx
 onnxruntime
 pandas
@@ -15,9 +15,9 @@ phones
 pytest
 pyyaml
 rich
-speech-collator
 scikit-learn
 seaborn
+speech-collator
 torchinfo
 torchview
 tqdm
