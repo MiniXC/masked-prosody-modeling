@@ -1,9 +1,8 @@
 #!/bin/bash
 if [ "$1" = "--dryrun" ]; then
-	gcloud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts
-	mkdir -p /dev/shm/libritts
-	tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
 	accelerate launch scripts/train.py configs/default.yml --dryrun
+	gcloud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts
+	tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
 	gcloud storage cp gs://datasets-cdminix/default_config.yaml /dev/shm/
 	rm /dev/shm/hf/accelerate/default_config.yaml
 	mkdir -p /dev/shm/hf/accelerate
