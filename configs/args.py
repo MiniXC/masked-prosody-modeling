@@ -6,7 +6,6 @@ class TrainingArgs:
     lr: float = 1e-4
     lr_schedule: str = "linear_with_warmup"
     lr_warmup_steps: int = 1000
-    vad_loss_weight: float = 10.0
     gradient_clip_val: float = 1.0
     checkpoint_path: str = "checkpoints"
     output_path: str = "outputs"
@@ -45,9 +44,9 @@ class CollatorArgs:
     vocex_model: str = "cdminix/vocex"
     name: str = "default"
     pitch_min: float = 50
-    pitch_max: float = 400
+    pitch_max: float = 300
     energy_min: float = 0
-    energy_max: float = 1
+    energy_max: float = 0.2
     vad_min: float = 0
     vad_max: float = 1
 

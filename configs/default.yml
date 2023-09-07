@@ -1,6 +1,6 @@
-lr: 1.0e-3
+lr: 5.0e-4
 lr_schedule: "linear_with_warmup"
-lr_warmup_steps: 100
+lr_warmup_steps: 1000
 n_steps: 10000
 n_layers: 16
 hidden_dim: 512
