@@ -31,6 +31,7 @@ with open("scripts/train.sh", "w") as f:
     f.write("\ttar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts\n")
     f.write("\tgcloud storage cp gs://datasets-cdminix/default_config.yaml /dev/shm/\n")
     f.write("\trm /dev/shm/hf/accelerate/default_config.yaml\n")
+    f.write("\tmkdir -p /dev/shm/hf/accelerate\n")
     f.write("\tmv /dev/shm/default_config.yaml /dev/shm/hf/accelerate/\n")
     f.write("\texit\n")
     f.write("fi\n")

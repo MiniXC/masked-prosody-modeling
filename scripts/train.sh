@@ -5,6 +5,7 @@ if [ "$1" = "--dryrun" ]; then
 	tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
 	gcloud storage cp gs://datasets-cdminix/default_config.yaml /dev/shm/
 	rm /dev/shm/hf/accelerate/default_config.yaml
+	mkdir -p /dev/shm/hf/accelerate
 	mv /dev/shm/default_config.yaml /dev/shm/hf/accelerate/
 	exit
 fi
