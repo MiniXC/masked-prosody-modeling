@@ -3,9 +3,10 @@ if [ "$1" = "--dryrun" ]; then
 	accelerate launch scripts/train.py configs/default.yml --dryrun
 	glcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts
 	tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
-	gcloud storage cp gs://datasets-cdminix/default_config.yml /dev/shm/
-	rm /dev/shm/hf/accelerate/default_config.yml
-	mv /dev/shm/default_config.yml /dev/shm/hf/accelerate/
+	gcloud storage cp gs://datasets-cdminix/default_config.yaml /dev/shm/
+	rm /dev/shm/hf/accelerate/default_config.yaml
+	mkdir -p /dev/shm/hf/accelerate
+	mv /dev/shm/default_config.yaml /dev/shm/hf/accelerate/
 	exit
 fi
 # Machine 1
