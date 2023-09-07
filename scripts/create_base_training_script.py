@@ -26,7 +26,7 @@ with open("scripts/train.sh", "w") as f:
     f.write('if [ "$1" = "--dryrun" ]; then\n')
     f.write("\taccelerate launch scripts/train.py configs/default.yml --dryrun\n")
     f.write(
-        "\tglcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts\n"
+        "\tgcloud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts\n"
     )
     f.write("\ttar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts\n")
     f.write("\tgcloud storage cp gs://datasets-cdminix/default_config.yaml /dev/shm/\n")
