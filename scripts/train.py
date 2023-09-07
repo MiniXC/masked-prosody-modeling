@@ -330,14 +330,17 @@ def main():
             collator_args,
         ) = parser.parse_args_into_dataclasses()
 
-    # check if run name is specified
-    if training_args.run_name is None:
-        raise ValueError("run_name must be specified")
-    if (
-        training_args.do_save
-        and (Path(training_args.checkpoint_path) / training_args.run_name).exists()
-    ):
-        raise ValueError(f"run_name {training_args.run_name} already exists")
+    if training_args.dryrun:
+        training_args.wandb_mode = "offline"
+    else:
+        # check if run name is specified
+        if training_args.run_name is None:
+            raise ValueError("run_name must be specified")
+        if (
+            training_args.do_save
+            and (Path(training_args.checkpoint_path) / training_args.run_name).exists()
+        ):
+            raise ValueError(f"run_name {training_args.run_name} already exists")
 
     # wandb
     if accelerator.is_main_process:
@@ -470,6 +473,9 @@ def main():
         for batch in tqdm(val_dl):
             pass
         collator_args.overwrite = False
+
+    if training_args.dryrun:
+        return
 
     if training_args.n_workers is not None:
         train_dl = DataLoader(

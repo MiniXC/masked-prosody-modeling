@@ -6,13 +6,16 @@ huggingface-hub
 librosa
 matplotlib
 numpy
+numba
 onnx
 onnxruntime
 pandas
+penn
 phones
 pytest
 pyyaml
 rich
+speech-collator
 scikit-learn
 seaborn
 torchinfo

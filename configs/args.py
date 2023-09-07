@@ -29,6 +29,7 @@ class TrainingArgs:
     save_every_n_steps: int = 1000
     push_to_hub: bool = False
     hub_repo: str = None
+    dryrun: bool = False
 
 
 @dataclass
