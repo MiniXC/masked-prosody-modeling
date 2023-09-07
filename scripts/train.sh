@@ -1,7 +1,10 @@
 #!/bin/bash
-accelerate launch scripts/train.py configs/default.yml --dryrun
-glcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts
-tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
+if [ "$1" = "--dryrun" ]; then
+	accelerate launch scripts/train.py configs/default.yml --dryrun
+	glcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts
+	tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts
+	exit
+fi
 # Machine 1
 if [ "$1" = "--machine" ] && [ "$2" = "v3-1" ]; then
 	accelerate launch scripts/train.py configs/default.yml --bin_size 4 --mask_len 1 --run_name "bin4_mask1"

@@ -12,9 +12,12 @@ m_counter = 0
 
 with open("scripts/train.sh", "w") as f:
     f.write("#!/bin/bash\n")
-    f.write("accelerate launch scripts/train.py configs/default.yml --dryrun\n")
-    f.write("glcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts\n")
-    f.write("tar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts\n")
+    f.write("if [ \"$1\" = \"--dryrun\" ]; then\n")
+    f.write("\taccelerate launch scripts/train.py configs/default.yml --dryrun\n")
+    f.write("\tglcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts\n")
+    f.write("\ttar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts\n")
+    f.write("\texit\n")
+    f.write("fi\n")
     for bin_size in bin_sizes:
         for mask_len in mask_lens:
             if counter % num_machines == 0:
