@@ -16,6 +16,9 @@ with open("scripts/train.sh", "w") as f:
     f.write("\taccelerate launch scripts/train.py configs/default.yml --dryrun\n")
     f.write("\tglcoud storage cp gs://datasets-cdminix/libritts_feats.tar.gz /dev/shm/libritts\n")
     f.write("\ttar -xzf /dev/shm/libritts/libritts_feats.tar.gz -C /dev/shm/libritts\n")
+    f.write("\tgcloud storage cp gs://datasets-cdminix/default_config.yml /dev/shm/\n")
+    f.write("\trm /dev/shm/hf/accelerate/default_config.yml\n")
+    f.write("\tmv /dev/shm/default_config.yml /dev/shm/hf/accelerate/\n")
     f.write("\texit\n")
     f.write("fi\n")
     for bin_size in bin_sizes:
