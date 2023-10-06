@@ -25,3 +25,9 @@ The following updates automatically every time ``scripts/train.py`` is run.
 <summary>Click to expand</summary>
 <img src="./figures/first_batch.png"></img>
 </details>
+
+## Random Masking Command
+
+```
+accelerate launch scripts/train.py configs/default.yml --bin_size 128 --mask_length 1 --mask_length_max 128 --run_name "bin128_mask_random" --wandb_mode=offline
+```
