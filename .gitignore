@@ -10,6 +10,7 @@ figures/*
 !figures/*.py
 .DS_Store
 checkpoints/
+data/
 
 #####################
 # Python            #

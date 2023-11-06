@@ -14,6 +14,184 @@ from speech_collator.measures import (
 
 from configs.args import CollatorArgs
 
+class FischerCollator:
+    def __init__(self, args: CollatorArgs):
+        self.bins = torch.linspace(0, 1, args.bin_size)
+        self.mask_p = args.mask_proportion
+        self.mask_l = args.mask_length
+        self.mask_l_max = args.mask_length_max
+        self.max_length = args.max_length
+        self.mask_proportion_tolerance = args.mask_proportion_tolerance
+        self.pitch_min = args.pitch_min
+        self.pitch_max = args.pitch_max
+        self.energy_min = args.energy_min
+        self.energy_max = args.energy_max
+        self.vad_min = args.vad_min
+        self.vad_max = args.vad_max
+
+    def __call__(self, batch):
+        # batch is a list of .npy files with shape (3, T)
+        # we take a random window of length max_length
+        # we then mask a random proportion of the frames, but vary the length of the masked spans
+        # we mask self.mask_p of the frames, but vary the length of the masked spans (using self.mask_l)
+        result = {
+            "pitch": [],
+            "energy": [],
+            "vad": [],
+            "condition_pitch": [],
+            "condition_energy": [],
+            "condition_vad": [],
+            "pitch_masked": [],
+            "energy_masked": [],
+            "vad_masked": [],
+            "condition_pitch_masked": [],
+            "condition_energy_masked": [],
+            "condition_vad_masked": [],
+            "mask_pad": [],
+            "mask_pred": [],
+        }
+        channel = np.random.randint(0, 2)
+        for i, item in enumerate(batch):
+            if channel == 0:
+                if "_A_B" not in item:
+                    other_item = item.replace("_A", "_A_B")
+                else:
+                    other_item = item
+                    item = item.replace("_A_B", "_A")
+            else:
+                if "_A_B" not in item:
+                    other_item = item
+                    item = item.replace("_A", "_A_B")
+                else:
+                    other_item = item.replace("_A_B", "_A")
+            features = np.load(item)
+            condition = np.load(other_item)
+            features = torch.from_numpy(features)
+            condition = torch.from_numpy(condition)
+            # if shorter than max_length, pad
+            if features.shape[1] < self.max_length:
+                # pad mask
+                pad_mask = torch.zeros(self.max_length)
+                pad_mask[: features.shape[1]] = 1
+                result["mask_pad"].append(pad_mask)
+                features = np.pad(
+                    features, ((0, 0), (0, self.max_length - features.shape[1]))
+                )
+                condition = np.pad(
+                    condition, ((0, 0), (0, self.max_length - condition.shape[1]))
+                )
+            # if longer than max_length, get random window
+            elif features.shape[1] > self.max_length:
+                start = np.random.randint(0, features.shape[1] - self.max_length)
+                features = features[:, start : start + self.max_length + 1]
+                condition = condition[:, start : start + self.max_length + 1]
+                # pad mask
+                pad_mask = torch.zeros(self.max_length)
+                pad_mask[:] = 1
+                result["mask_pad"].append(pad_mask)
+            pitch = features[0, :-1]
+            energy = features[1, :-1]
+            vad = features[2, :-1]
+            condition_pitch = condition[0, :-1]
+            condition_energy = condition[1, :-1]
+            condition_vad = condition[2, :-1]
+            pitch[torch.isnan(pitch)] = 0
+            energy[torch.isnan(energy)] = 0
+            vad[torch.isnan(vad)] = 0
+            condition_pitch[torch.isnan(condition_pitch)] = 0
+            condition_energy[torch.isnan(condition_energy)] = 0
+            condition_vad[torch.isnan(condition_vad)] = 0
+            result["pitch"].append(pitch)
+            result["energy"].append(energy)
+            result["vad"].append(vad)
+            result["condition_pitch"].append(condition_pitch)
+            result["condition_energy"].append(condition_energy)
+            result["condition_vad"].append(condition_vad)
+        # bucketize
+        pitch = torch.stack(result["pitch"])
+        energy = torch.stack(result["energy"])
+        vad = torch.stack(result["vad"])
+        condition_pitch = torch.stack(result["condition_pitch"])
+        condition_energy = torch.stack(result["condition_energy"])
+        condition_vad = torch.stack(result["condition_vad"])
+        # 1 is reserved for masking, 0 is reserved for padding
+        result["pitch_raw"] = pitch
+        result["energy_raw"] = energy
+        result["vad_raw"] = vad
+        result["condition_pitch_raw"] = condition_pitch
+        result["condition_energy_raw"] = condition_energy
+        result["condition_vad_raw"] = condition_vad
+        # clip to range specified in args
+        pitch = torch.clip(pitch, self.pitch_min, self.pitch_max) / (
+            self.pitch_max - self.pitch_min
+        )
+        energy = torch.clip(energy, self.energy_min, self.energy_max) / (
+            self.energy_max - self.energy_min
+        )
+        vad = torch.clip(vad, self.vad_min, self.vad_max) / (
+            self.vad_max - self.vad_min
+        )
+        condition_pitch = torch.clip(condition_pitch, self.pitch_min, self.pitch_max) / (
+            self.pitch_max - self.pitch_min
+        )
+        condition_energy = torch.clip(condition_energy, self.energy_min, self.energy_max) / (
+            self.energy_max - self.energy_min
+        )
+        condition_vad = torch.clip(condition_vad, self.vad_min, self.vad_max) / (
+            self.vad_max - self.vad_min
+        )
+        pitch = torch.bucketize(pitch, self.bins)
+        energy = torch.bucketize(energy, self.bins)
+        vad = torch.bucketize(vad, torch.linspace(0, 1, 2))
+        condition_pitch = torch.bucketize(condition_pitch, self.bins)
+        condition_energy = torch.bucketize(condition_energy, self.bins)
+        condition_vad = torch.bucketize(condition_vad, torch.linspace(0, 1, 2))
+        result["pitch"] = pitch
+        result["energy"] = energy
+        result["vad"] = vad
+        result["condition_pitch"] = condition_pitch
+        result["condition_energy"] = condition_energy
+        result["condition_vad"] = condition_vad
+        # mask
+        # We always mask a fixed proportion of the frames, but vary the length of the masked spans.
+        # We mask self.mask_p of the frames, but vary the length of the masked spans (using self.mask_l)
+        result["mask_pad"] = torch.stack(result["mask_pad"])
+        mask = torch.ones_like(result["mask_pad"]).bool()
+        pad_mask = result["mask_pad"].bool()
+        if self.mask_l_max is not None:
+            mask_l_batch = np.random.randint(self.mask_l, self.mask_l_max + 1)
+        else:
+            mask_l_batch = self.mask_l
+        mask_p = self.mask_p
+        while (mask.bool() & pad_mask).sum() / pad_mask.sum() > mask_p:
+            start = np.random.randint(0, self.max_length)
+            new_mask = mask.clone()
+            new_mask[:, start : start + mask_l_batch] = 0
+            if (
+                new_mask.bool() & pad_mask
+            ).sum() / pad_mask.sum() >= mask_p - self.mask_proportion_tolerance:
+                mask = new_mask
+        result["pitch_masked"] = result["pitch"].clone() + 2
+        result["pitch_masked"][~mask] = 1
+        result["pitch_masked"][~pad_mask] = 0
+        result["pitch_condition_masked"] = result["condition_pitch"].clone() + 2
+        result["pitch_condition_masked"][~mask] = 1
+        result["pitch_condition_masked"][~pad_mask] = 0
+        result["energy_masked"] = result["energy"].clone() + 2
+        result["energy_masked"][~mask] = 1
+        result["energy_masked"][~pad_mask] = 0
+        result["energy_condition_masked"] = result["condition_energy"].clone() + 2
+        result["energy_condition_masked"][~mask] = 1
+        result["energy_condition_masked"][~pad_mask] = 0
+        result["vad_masked"] = result["vad"].clone() + 2
+        result["vad_masked"][~mask] = 1
+        result["vad_masked"][~pad_mask] = 0
+        result["vad_condition_masked"] = result["condition_vad"].clone() + 2
+        result["vad_condition_masked"][~mask] = 1
+        result["vad_condition_masked"][~pad_mask] = 0
+        result["mask_pred"] = ~(mask.bool())
+        result["mask_pad"] = result["mask_pad"].bool()
+        return result
 
 class LibriTTSAlgoCollator:
     def __init__(self, args: CollatorArgs):
