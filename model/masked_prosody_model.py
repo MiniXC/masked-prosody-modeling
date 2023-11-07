@@ -198,7 +198,9 @@ class ConversationalMaskedProsodyModel(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def forward(self, x, condition, return_layer=None):
+    def forward(self, x, condition=None, return_layer=None):
+        if condition is None:
+            condition = (x * 0).to(torch.int64)
         pitch = x[:, 0]
         energy = x[:, 1]
         vad = x[:, 2]

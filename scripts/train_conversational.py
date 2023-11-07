@@ -120,7 +120,7 @@ def save_checkpoint():
         Path(training_args.checkpoint_path) / checkpoint_name / f"step_{global_step}"
     )
     # model
-    model.save_model(checkpoint_path, accelerator, onnx=training_args.save_onnx)
+    model.save_model(checkpoint_path, accelerator)
     if accelerator.is_main_process:
         # training args
         with open(checkpoint_path / "training_args.yml", "w") as f:
@@ -166,6 +166,8 @@ def train_epoch(epoch):
                     batch["vad_condition_masked"],
                 ]
             ).transpose(0, 1)
+            if np.random.rand() < training_args.drop_channel_prob:
+                condition = None
             y = model(x, condition)
             mask = batch["mask_pad"] * batch["mask_pred"]
             pred_pitch = y[0].permute(0, 2, 1)
@@ -426,7 +428,13 @@ def main():
     seed_everything(training_args.seed)
     model_args.bins = collator_args.bin_size
     model_args.max_length = collator_args.max_length
-    model = ConversationalMaskedProsodyModel(model_args)
+    if training_args.from_checkpoint is not None:
+        console_print(f"[green]from_pretrained[/green]: {training_args.from_checkpoint}")
+        model = ConversationalMaskedProsodyModel.from_pretrained(
+            training_args.from_pretrained
+        )
+    else:
+        model = ConversationalMaskedProsodyModel(model_args)
     console_rule("Model")
     print_and_draw_model()
 

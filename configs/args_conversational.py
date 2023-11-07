@@ -8,18 +8,19 @@ class TrainingArgs:
     lr_warmup_steps: int = 1000
     gradient_clip_val: float = 1.0
     checkpoint_path: str = "checkpoints"
+    from_checkpoint: str = None
     output_path: str = "outputs"
     run_name: str = None
     wandb_mode: str = "online"
     wandb_project: str = "mpm-conversational"
     wandb_dir: str = "wandb"
     n_workers: int = None
-    n_steps: int = 50000
+    n_steps: int = 20000
     batch_size: int = 8
     seed: int = 0
     dataset: str = "data/fischer"
     log_every_n_steps: int = 100
-    do_save: bool = False
+    do_save: bool = True
     save_onnx: bool = False
     eval_only: bool = False
     eval_every_n_steps: int = 1000
@@ -27,6 +28,7 @@ class TrainingArgs:
     push_to_hub: bool = False
     hub_repo: str = None
     dryrun: bool = False
+    drop_channel_prob: float = 0.05
 
 
 @dataclass
